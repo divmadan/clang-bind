@@ -2,130 +2,121 @@ import inspect
 import clang.cindex as clang
 
 
+"""
+- `getmembers` from the inspect module triggers execution, which leads to errors when types are not satisfied.
+- So we define a custom function based on the one in the inspect module.
+- It replaces `getattr_static` with `getattr_static` to solve the issue.
+"""
+
+
+def getmembers_static(object, predicate=None):
+    """Return all members of an object as (name, value) pairs sorted by name.
+    Optionally, only return members that satisfy a given predicate."""
+    if inspect.isclass(object):
+        mro = (object,) + inspect.getmro(object)
+    else:
+        mro = ()
+    results = []
+    processed = set()
+    names = dir(object)
+    # :dd any DynamicClassAttributes to the list of names if object is a class;
+    # this may result in duplicate entries if, for example, a virtual
+    # attribute with the same name as a DynamicClassAttribute exists
+    try:
+        for base in object.__bases__:
+            for k, v in base.__dict__.items():
+                if isinstance(v, types.DynamicClassAttribute):
+                    names.append(k)
+    except AttributeError:
+        pass
+    for key in names:
+        # First try to get the value via getattr.  Some descriptors don't
+        # like calling their __get__ (see bug #1785), so fall back to
+        # looking in the __dict__.
+        try:
+            value = inspect.getattr_static(object, key)
+            # handle the duplicate key
+            if key in processed:
+                raise AttributeError
+        except AttributeError:
+            for base in mro:
+                if key in base.__dict__:
+                    value = base.__dict__[key]
+                    break
+            else:
+                # could be a (currently) missing slot member, or a buggy
+                # __dir__; discard and move on
+                continue
+        if not predicate or predicate(value):
+            results.append((key, value))
+        processed.add(key)
+    results.sort(key=lambda pair: pair[0])
+    return results
+
+
+####################################################################################################
+
+# A list to ignore the functions/properties that causes segmentation errors.
+ignore_list = ["mangled_name", "get_address_space", "get_typedef_name", "tls_kind"]
+
+
+def macro(instance, object):
+    instance.check_functions = {}
+    instance.get_functions = {}
+    instance.properties = {}
+
+    for entry in getmembers_static(object, predicate=inspect.isfunction):
+        if entry[0] not in ignore_list:
+            try:
+                if entry[0].startswith("is_"):
+                    instance.check_functions[entry[0]] = entry[1](object)
+            except:
+                continue
+            try:
+                if entry[0].startswith("get_"):
+                    instance.get_functions[entry[0]] = entry[1](object)
+            except:
+                continue
+
+    for entry in getmembers_static(object):
+        if entry[0] not in ignore_list:
+            try:
+                if isinstance(entry[1], property):
+                    instance.properties[entry[0]] = getattr(object, entry[0])
+            except:
+                continue
+
+
 class CursorKindUtils:
-    """
-    CursorKind utilities
-
-    `check_functions`:
-        - Functions that begin with "is_" i.e., checking functions
-        - A list of two-tuples: (function_name: str, function_signature: function)
-    `get_functions`:
-        - Functions that begin with "get_" i.e., getter functions
-        - A list of two-tuples: (function_name: str, function_signature: function)
-    `properties`:
-        - @property functions
-        - A list of two-tuples: (function_name: str, function_signature: property)
-    """
-
-    check_functions = [
-        entry
-        for entry in inspect.getmembers(clang.CursorKind, predicate=inspect.isfunction)
-        if entry[0].startswith("is_")
-    ]
-
-    get_functions = [
-        entry
-        for entry in inspect.getmembers(clang.CursorKind, predicate=inspect.isfunction)
-        if entry[0].startswith("get_")
-    ]
-    properties = [
-        entry
-        for entry in inspect.getmembers(clang.CursorKind)
-        if isinstance(entry[1], property)
-    ]
+    def __init__(self, cursor_kind: clang.CursorKind):
+        macro(instance=self, object=cursor_kind)
 
 
 class CursorUtils:
-    """
-    Cursor utilities
-
-    `check_functions`:
-        - Functions that begin with "is_" i.e., checking functions
-        - A list of two-tuples: (function_name: str, function_signature: function)
-    `get_functions`:
-        - Functions that begin with "get_" i.e., getter functions
-        - A list of two-tuples: (function_name: str, function_signature: function)
-    `properties`:
-        - @property functions
-        - A list of two-tuples: (function_name: str, function_signature: property)
-    """
-
-    check_functions = [
-        entry
-        for entry in inspect.getmembers(clang.Cursor, predicate=inspect.isfunction)
-        if entry[0].startswith("is_")
-    ]
-    get_functions = [
-        entry
-        for entry in inspect.getmembers(clang.Cursor, predicate=inspect.isfunction)
-        if entry[0].startswith("get_")
-    ]
-    properties = [
-        entry
-        for entry in inspect.getmembers(clang.Cursor)
-        if isinstance(entry[1], property)
-    ]
+    def __init__(self, cursor: clang.Cursor):
+        macro(instance=self, object=cursor)
 
 
 class TypeUtils:
-    """
-    Type utilities
-
-    `check_functions`:
-        - Functions that begin with "is_" i.e., checking functions
-        - A list of two-tuples: (function_name: str, function_signature: function)
-    `get_functions`:
-        - Functions that begin with "get_" i.e., getter functions
-        - A list of two-tuples: (function_name: str, function_signature: function)
-    `properties`:
-        - @property functions
-        - A list of two-tuples: (function_name: str, function_signature: property)
-    """
-
-    check_functions = [
-        entry
-        for entry in inspect.getmembers(clang.Type, predicate=inspect.isfunction)
-        if entry[0].startswith("is_")
-    ]
-    get_functions = [
-        entry
-        for entry in inspect.getmembers(clang.Type, predicate=inspect.isfunction)
-        if entry[0].startswith("get_")
-    ]
-    properties = [
-        entry
-        for entry in inspect.getmembers(clang.Type)
-        if isinstance(entry[1], property)
-    ]
+    def __init__(self, cursor_type: clang.Type):
+        macro(instance=self, object=cursor_type)
 
 
-class BaseEnumerationAsBase:
-    """
-    BaseEnumeration's derived classes' utilities
+# Docstring template for the classes
+class_docstring = """
+{class_name} class utilities
 
-    `class_list`:
-        - Classes that have class `BaseEnumeration` as their base classes
-        - A list of two-tuples: (class_name: str, class_type: type)
-    """
+`check_functions`:
+    - Functions that begin with "is_" i.e., checking functions
+    - A list of two-tuples: (function_name: str, function_value: function)
+`get_functions`:
+    - Functions that begin with "get_" i.e., getter functions
+    - A list of two-tuples: (function_name: str, function_value: function)
+`properties`:
+    - @property functions
+    - A list of two-tuples: (property_name: str, property_value: property)
+"""
 
-    class_list = [
-        entry
-        for entry in inspect.getmembers(clang, predicate=inspect.isclass)
-        if entry[1].__base__ == clang.BaseEnumeration
-    ]
-
-
-class StructureAsBase:
-    """
-    Structure's derived classes' utilities
-
-    `class_list`:
-        - Classes that have class `Structure` as their base classes
-        - A list of two-tuples: (class_name: str, class_type: type)
-    """
-
-    class_list = [
-        entry
-        for entry in inspect.getmembers(clang, predicate=inspect.isclass)
-        if entry[1].__base__ == clang.Structure
-    ]
+CursorKindUtils.__doc__ = class_docstring.format(class_name="CursorKind")
+CursorUtils.__doc__ = class_docstring.format(class_name="Cursor")
+TypeUtils.__doc__ = class_docstring.format(class_name="Type")
