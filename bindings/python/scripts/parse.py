@@ -4,6 +4,7 @@ import clang.cindex as clang
 
 from context import scripts
 import scripts.utils as utils
+from scripts.clang_utils import CursorKindUtils, CursorUtils, TypeUtils
 
 
 def valid_children(node):
@@ -97,72 +98,43 @@ def generate_parsed_info(node):
     parsed_info["depth"] = depth
     parsed_info["line"] = cursor.location.line
     parsed_info["column"] = cursor.location.column
-    parsed_info["kind"] = cursor.kind.name
     parsed_info["tokens"] = [x.spelling for x in cursor.get_tokens()]
-
-    if cursor.is_anonymous():
-        parsed_info["kind"] = "ANONYMOUS_" + parsed_info["kind"]
-    parsed_info["name"] = cursor.spelling
-    if cursor.type.kind.spelling != "Invalid":
-        parsed_info["element_type"] = cursor.type.kind.spelling
-    if cursor.access_specifier.name != "INVALID":
-        parsed_info["access_specifier"] = cursor.access_specifier.name
-    if cursor.result_type.spelling != "":
-        parsed_info["result_type"] = cursor.result_type.spelling
-    if cursor.brief_comment:
-        parsed_info["brief_comment"] = cursor.brief_comment
-    if cursor.raw_comment:
-        parsed_info["raw_comment"] = cursor.raw_comment
+    parsed_info["members"] = []
 
     # add result of various kinds of checks available in cindex.py
 
-    cursorkind_checks = {
-        "kind_is_declaration": cursor.kind.is_declaration,
-        "kind_is_reference": cursor.kind.is_reference,
-        "kind_is_expression": cursor.kind.is_expression,
-        "kind_is_statement": cursor.kind.is_statement,
-        "kind_is_attribute": cursor.kind.is_attribute,
-        "kind_is_invalid": cursor.kind.is_invalid,
-        "kind_is_translation_unit": cursor.kind.is_translation_unit,
-        "kind_is_preprocessing": cursor.kind.is_preprocessing,
-        "kind_is_unexposed": cursor.kind.is_unexposed,
-    }
+    def macro(key, object):
+        """
+        A macro to make dictionaries of all checks and add them as elements to `parsed_info`.
+        """
+        parsed_info[key] = {}
+        for d in (
+            object.check_functions,
+            object.properties,
+        ):
+            for k, v in d.items():
+                parsed_info[key][k] = v
 
-    # check for deleted ctor analogous to `is_default_constructor` unavailable
-    cursor_checks = {
-        "is_definition": cursor.is_definition,
-        "is_const_method": cursor.is_const_method,
-        "is_converting_constructor": cursor.is_converting_constructor,
-        "is_copy_constructor": cursor.is_copy_constructor,
-        "is_default_constructor": cursor.is_default_constructor,
-        "is_move_constructor": cursor.is_move_constructor,
-        "is_default_method": cursor.is_default_method,
-        "is_mutable_field": cursor.is_mutable_field,
-        "is_pure_virtual_method": cursor.is_pure_virtual_method,
-        "is_static_method": cursor.is_static_method,
-        "is_virtual_method": cursor.is_virtual_method,
-        "is_abstract_record": cursor.is_abstract_record,
-        "is_scoped_enum": cursor.is_scoped_enum,
-        "is_anonymous": cursor.is_anonymous,
-        "is_bitfield": cursor.is_bitfield,
-    }
+    macro(key="CursorKind", object=CursorKindUtils(cursor_kind=cursor.kind))
+    macro(key="Cursor", object=CursorUtils(cursor=cursor))
+    macro(key="Type", object=TypeUtils(cursor_type=cursor.type))
 
-    type_checks = {
-        "type_is_const_qualified": cursor.type.is_const_qualified,
-        "type_is_volatile_qualified": cursor.type.is_volatile_qualified,
-        "type_is_restrict_qualified": cursor.type.is_restrict_qualified,
-        "type_is_pod": cursor.type.is_pod,
-    }
+    ####################################################################################################
 
-    for checks in (cursorkind_checks, cursor_checks, type_checks):
-        for check, check_call in checks.items():
-            parsed_info[check] = check_call()
+    # Hacky fixes
 
-    # special case handling for `cursor.type.is_function_variadic()`
-    if cursor.type.kind.spelling == "FunctionProto":
-        parsed_info["type_is_function_variadic"] = cursor.type.is_function_variadic()
+    # get spelling from object
+    parsed_info["Cursor"]["result_type"] = parsed_info["Cursor"]["result_type"].spelling
 
-    parsed_info["members"] = []
+    # replace `AccessSpecifier.value` with just `value`
+    parsed_info["Cursor"]["access_specifier"] = parsed_info["Cursor"][
+        "access_specifier"
+    ].name
+
+    # replace `TypeKind.value` with just `value`
+    parsed_info["Type"]["kind"] = parsed_info["Type"]["kind"].name
+
+    ####################################################################################################
 
     # Get cursor's children and recursively add their info to a dictionary, as members of the parent
     for child_node in valid_children(node):
