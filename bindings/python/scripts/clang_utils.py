@@ -2,16 +2,18 @@ import inspect
 import clang.cindex as clang
 
 
-"""
-- `getmembers` from the inspect module triggers execution, which leads to errors when types are not satisfied.
-- So we define a custom function based on the one in the inspect module.
-- It replaces `getattr_static` with `getattr_static` to solve the issue.
-"""
-
-
 def getmembers_static(object, predicate=None):
-    """Return all members of an object as (name, value) pairs sorted by name.
-    Optionally, only return members that satisfy a given predicate."""
+    """
+    Return all members of an object as (name, value) pairs sorted by name.
+    Optionally, only return members that satisfy a given predicate.
+    """
+
+    """
+    - `getmembers` from the inspect module triggers execution, which leads to errors when types are not satisfied.
+    - So we define a custom function based on the one in the inspect module.
+    - It replaces `getattr_static` with `getattr_static` to solve the issue.
+    """
+
     if inspect.isclass(object):
         mro = (object,) + inspect.getmro(object)
     else:
@@ -54,14 +56,13 @@ def getmembers_static(object, predicate=None):
     return results
 
 
-# A list to ignore the functions/properties that causes segmentation errors.
-ignore_list = ["mangled_name", "get_address_space", "get_typedef_name", "tls_kind"]
-
-
-def macro(instance, object):
+def define_class_using_macro(instance, object):
     instance.check_functions_dict = {}
     instance.get_functions_dict = {}
     instance.properties_dict = {}
+
+    # A list to ignore the functions/properties that causes segmentation errors.
+    ignore_list = ["mangled_name", "get_address_space", "get_typedef_name", "tls_kind"]
 
     for entry in getmembers_static(object, predicate=inspect.isfunction):
         if entry[0] not in ignore_list:
@@ -87,17 +88,17 @@ def macro(instance, object):
 
 class CursorKindUtils:
     def __init__(self, cursor_kind: clang.CursorKind):
-        macro(instance=self, object=cursor_kind)
+        define_class_using_macro(instance=self, object=cursor_kind)
 
 
 class CursorUtils:
     def __init__(self, cursor: clang.Cursor):
-        macro(instance=self, object=cursor)
+        define_class_using_macro(instance=self, object=cursor)
 
 
 class TypeUtils:
     def __init__(self, cursor_type: clang.Type):
-        macro(instance=self, object=cursor_type)
+        define_class_using_macro(instance=self, object=cursor_type)
 
 
 # Docstring template for the classes
