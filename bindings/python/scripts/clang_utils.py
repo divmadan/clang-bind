@@ -54,27 +54,25 @@ def getmembers_static(object, predicate=None):
     return results
 
 
-####################################################################################################
-
 # A list to ignore the functions/properties that causes segmentation errors.
 ignore_list = ["mangled_name", "get_address_space", "get_typedef_name", "tls_kind"]
 
 
 def macro(instance, object):
-    instance.check_functions = {}
-    instance.get_functions = {}
-    instance.properties = {}
+    instance.check_functions_dict = {}
+    instance.get_functions_dict = {}
+    instance.properties_dict = {}
 
     for entry in getmembers_static(object, predicate=inspect.isfunction):
         if entry[0] not in ignore_list:
             try:
                 if entry[0].startswith("is_"):
-                    instance.check_functions[entry[0]] = entry[1](object)
+                    instance.check_functions_dict[entry[0]] = entry[1](object)
             except:
                 continue
             try:
                 if entry[0].startswith("get_"):
-                    instance.get_functions[entry[0]] = entry[1](object)
+                    instance.get_functions_dict[entry[0]] = entry[1](object)
             except:
                 continue
 
@@ -82,7 +80,7 @@ def macro(instance, object):
         if entry[0] not in ignore_list:
             try:
                 if isinstance(entry[1], property):
-                    instance.properties[entry[0]] = getattr(object, entry[0])
+                    instance.properties_dict[entry[0]] = getattr(object, entry[0])
             except:
                 continue
 
@@ -106,13 +104,13 @@ class TypeUtils:
 class_docstring = """
 {class_name} class utilities
 
-`check_functions`:
+`check_functions_dict`:
     - Functions that begin with "is_" i.e., checking functions
     - A list of two-tuples: (function_name: str, function_value: function)
-`get_functions`:
+`get_functions_dict`:
     - Functions that begin with "get_" i.e., getter functions
     - A list of two-tuples: (function_name: str, function_value: function)
-`properties`:
+`properties_dict`:
     - @property functions
     - A list of two-tuples: (property_name: str, property_value: property)
 """
