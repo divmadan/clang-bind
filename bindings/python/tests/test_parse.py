@@ -46,7 +46,6 @@ def test_anonymous_decls(tmp_path):
     parsed_info = get_parsed_info(tmp_path=tmp_path, file_contents=file_contents)
 
     union_decl = parsed_info["members"][0]
-    print(union_decl["Cursor"])
 
     assert union_decl["CursorKind"]["name"] == "UNION_DECL"
     assert union_decl["Cursor"]["is_anonymous"] == True
