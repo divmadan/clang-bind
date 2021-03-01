@@ -101,25 +101,17 @@ def generate_parsed_info(node):
     parsed_info["tokens"] = [x.spelling for x in cursor.get_tokens()]
     parsed_info["members"] = []
 
-    # add result of various kinds of checks available in cindex.py
-
-    def macro(key, object):
-        """
-        A macro to make dictionaries of all checks and add them as elements to `parsed_info`.
-        """
-        parsed_info[key] = {}
-        for d in (
-            object.check_functions,
-            object.properties,
-        ):
-            for k, v in d.items():
-                parsed_info[key][k] = v
-
-    macro(key="CursorKind", object=CursorKindUtils(cursor_kind=cursor.kind))
-    macro(key="Cursor", object=CursorUtils(cursor=cursor))
-    macro(key="Type", object=TypeUtils(cursor_type=cursor.type))
-
-    ####################################################################################################
+    # add result of various kinds of checks available in cindex.py via clang_utils.py
+    for key, object in (
+        ("CursorKind", CursorKindUtils(cursor_kind=cursor.kind)),
+        ("Cursor", CursorUtils(cursor=cursor)),
+        ("Type", TypeUtils(cursor_type=cursor.type)),
+    ):
+        parsed_info[key] = {
+            **object.check_functions_dict,
+            **object.get_functions_dict,
+            **object.properties_dict,
+        }
 
     # Hacky fixes
 
@@ -133,8 +125,6 @@ def generate_parsed_info(node):
 
     # replace `TypeKind.value` with just `value`
     parsed_info["Type"]["kind"] = parsed_info["Type"]["kind"].name
-
-    ####################################################################################################
 
     # Get cursor's children and recursively add their info to a dictionary, as members of the parent
     for child_node in valid_children(node):
