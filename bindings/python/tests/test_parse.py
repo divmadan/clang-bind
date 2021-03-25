@@ -47,30 +47,30 @@ def test_anonymous_decls(tmp_path):
 
     union_decl = parsed_info["members"][0]
 
-    assert union_decl["CursorKind"]["name"] == "UNION_DECL"
-    assert union_decl["Cursor"]["is_anonymous"] == True
-    assert union_decl["Cursor"]["spelling"] == ""
+    assert union_decl["cursor_kind"]["name"] == "UNION_DECL"
+    assert union_decl["cursor"]["is_anonymous"] == True
+    assert union_decl["cursor"]["spelling"] == ""
 
     struct_decl = union_decl["members"][0]
 
-    assert struct_decl["CursorKind"]["name"] == "STRUCT_DECL"
-    assert union_decl["Cursor"]["is_anonymous"] == True
-    assert union_decl["Cursor"]["spelling"] == ""
+    assert struct_decl["cursor_kind"]["name"] == "STRUCT_DECL"
+    assert union_decl["cursor"]["is_anonymous"] == True
+    assert union_decl["cursor"]["spelling"] == ""
 
     enum_decl = struct_decl["members"][0]
 
-    assert enum_decl["CursorKind"]["name"] == "ENUM_DECL"
-    assert union_decl["Cursor"]["is_anonymous"] == True
-    assert union_decl["Cursor"]["spelling"] == ""
+    assert enum_decl["cursor_kind"]["name"] == "ENUM_DECL"
+    assert union_decl["cursor"]["is_anonymous"] == True
+    assert union_decl["cursor"]["spelling"] == ""
 
 
 def test_translation_unit(tmp_path):
     file_contents = ""
     parsed_info = get_parsed_info(tmp_path=tmp_path, file_contents=file_contents)
 
-    assert parsed_info["CursorKind"]["name"] == "TRANSLATION_UNIT"
+    assert parsed_info["cursor_kind"]["name"] == "TRANSLATION_UNIT"
     assert parsed_info["depth"] == 0
-    assert parsed_info["Cursor"]["spelling"] == str(tmp_path / "file.cpp")
+    assert parsed_info["cursor"]["spelling"] == str(tmp_path / "file.cpp")
 
 
 def test_namespace(tmp_path):
@@ -79,8 +79,8 @@ def test_namespace(tmp_path):
 
     namespace = parsed_info["members"][0]
 
-    assert namespace["CursorKind"]["name"] == "NAMESPACE"
-    assert namespace["Cursor"]["spelling"] == "a_namespace"
+    assert namespace["cursor_kind"]["name"] == "NAMESPACE"
+    assert namespace["cursor"]["spelling"] == "a_namespace"
 
 
 def test_namespace_ref(tmp_path):
@@ -92,14 +92,14 @@ def test_namespace_ref(tmp_path):
 
     inclusion_directive = parsed_info["members"][0]
 
-    assert inclusion_directive["CursorKind"]["name"] == "INCLUSION_DIRECTIVE"
-    assert inclusion_directive["Cursor"]["spelling"] == "ostream"
+    assert inclusion_directive["cursor_kind"]["name"] == "INCLUSION_DIRECTIVE"
+    assert inclusion_directive["cursor"]["spelling"] == "ostream"
 
     var_decl = parsed_info["members"][1]
     namespace_ref = var_decl["members"][0]
 
-    assert namespace_ref["CursorKind"]["name"] == "NAMESPACE_REF"
-    assert namespace_ref["Cursor"]["spelling"] == "std"
+    assert namespace_ref["cursor_kind"]["name"] == "NAMESPACE_REF"
+    assert namespace_ref["cursor"]["spelling"] == "std"
 
 
 def test_var_decl(tmp_path):
@@ -108,9 +108,9 @@ def test_var_decl(tmp_path):
 
     var_decl = parsed_info["members"][0]
 
-    assert var_decl["CursorKind"]["name"] == "VAR_DECL"
-    assert var_decl["Type"]["kind"] == "INT"
-    assert var_decl["Cursor"]["spelling"] == "anInt"
+    assert var_decl["cursor_kind"]["name"] == "VAR_DECL"
+    assert var_decl["type"]["kind"] == "INT"
+    assert var_decl["cursor"]["spelling"] == "anInt"
 
 
 def test_field_decl(tmp_path):
@@ -124,9 +124,9 @@ def test_field_decl(tmp_path):
     struct_decl = parsed_info["members"][0]
     field_decl = struct_decl["members"][0]
 
-    assert field_decl["CursorKind"]["name"] == "FIELD_DECL"
-    assert field_decl["Type"]["kind"] == "INT"
-    assert field_decl["Cursor"]["spelling"] == "aClassMember"
+    assert field_decl["cursor_kind"]["name"] == "FIELD_DECL"
+    assert field_decl["type"]["kind"] == "INT"
+    assert field_decl["cursor"]["spelling"] == "aClassMember"
 
 
 def test_parsed_info_structure(tmp_path):
@@ -146,9 +146,9 @@ def test_function_decl_without_parameters(tmp_path):
 
     func_decl = parsed_info["members"][0]
 
-    assert func_decl["CursorKind"]["name"] == "FUNCTION_DECL"
-    assert func_decl["Cursor"]["spelling"] == "aFunction"
-    assert func_decl["Cursor"]["result_type"] == "int"
+    assert func_decl["cursor_kind"]["name"] == "FUNCTION_DECL"
+    assert func_decl["cursor"]["spelling"] == "aFunction"
+    assert func_decl["cursor"]["result_type"] == "int"
 
 
 def test_function_decl_with_parameters(tmp_path):
@@ -159,18 +159,18 @@ def test_function_decl_with_parameters(tmp_path):
 
     func_decl = parsed_info["members"][0]
 
-    assert func_decl["CursorKind"]["name"] == "FUNCTION_DECL"
-    assert func_decl["Cursor"]["spelling"] == "aFunction"
-    assert func_decl["Cursor"]["result_type"] == "int"
+    assert func_decl["cursor_kind"]["name"] == "FUNCTION_DECL"
+    assert func_decl["cursor"]["spelling"] == "aFunction"
+    assert func_decl["cursor"]["result_type"] == "int"
 
     first_param = func_decl["members"][0]
     second_param = func_decl["members"][1]
 
-    assert first_param["Cursor"]["spelling"] == "firstParam"
-    assert first_param["Type"]["kind"] == "INT"
+    assert first_param["cursor"]["spelling"] == "firstParam"
+    assert first_param["type"]["kind"] == "INT"
 
-    assert second_param["Cursor"]["spelling"] == "secondParam"
-    assert second_param["Type"]["kind"] == "DOUBLE"
+    assert second_param["cursor"]["spelling"] == "secondParam"
+    assert second_param["type"]["kind"] == "DOUBLE"
 
 
 def test_simple_call_expr(tmp_path):
@@ -185,10 +185,10 @@ def test_simple_call_expr(tmp_path):
     var_decl = parsed_info["members"][1]
     call_expr = var_decl["members"][0]
 
-    assert call_expr["CursorKind"]["name"] == "CALL_EXPR"
-    assert call_expr["Cursor"]["spelling"] == "aFunction"
+    assert call_expr["cursor_kind"]["name"] == "CALL_EXPR"
+    assert call_expr["cursor"]["spelling"] == "aFunction"
 
-    assert var_decl["Cursor"]["spelling"] == "anInt"
+    assert var_decl["cursor"]["spelling"] == "anInt"
 
 
 def test_struct_decl(tmp_path):
@@ -197,8 +197,8 @@ def test_struct_decl(tmp_path):
 
     struct_decl = parsed_info["members"][0]
 
-    assert struct_decl["CursorKind"]["name"] == "STRUCT_DECL"
-    assert struct_decl["Cursor"]["spelling"] == "AStruct"
+    assert struct_decl["cursor_kind"]["name"] == "STRUCT_DECL"
+    assert struct_decl["cursor"]["spelling"] == "AStruct"
 
 
 def test_public_inheritance(tmp_path):
@@ -211,9 +211,9 @@ def test_public_inheritance(tmp_path):
     child_struct_decl = parsed_info["members"][1]
     cxx_base_specifier = child_struct_decl["members"][0]
 
-    assert cxx_base_specifier["CursorKind"]["name"] == "CXX_BASE_SPECIFIER"
-    assert cxx_base_specifier["Cursor"]["access_specifier"] == "PUBLIC"
-    assert cxx_base_specifier["Cursor"]["spelling"] == "struct BaseStruct"
+    assert cxx_base_specifier["cursor_kind"]["name"] == "CXX_BASE_SPECIFIER"
+    assert cxx_base_specifier["cursor"]["access_specifier"] == "PUBLIC"
+    assert cxx_base_specifier["cursor"]["spelling"] == "struct BaseStruct"
 
 
 def test_member_function(tmp_path):
@@ -227,9 +227,9 @@ def test_member_function(tmp_path):
     struct_decl = parsed_info["members"][0]
     cxx_method = struct_decl["members"][0]
 
-    assert cxx_method["CursorKind"]["name"] == "CXX_METHOD"
-    assert cxx_method["Cursor"]["result_type"] == "void"
-    assert cxx_method["Cursor"]["spelling"] == "aMethod"
+    assert cxx_method["cursor_kind"]["name"] == "CXX_METHOD"
+    assert cxx_method["cursor"]["result_type"] == "void"
+    assert cxx_method["cursor"]["spelling"] == "aMethod"
 
 
 def test_type_ref(tmp_path):
@@ -246,12 +246,12 @@ def test_type_ref(tmp_path):
     cxx_method = class_decl["members"][0]
     parm_decl = cxx_method["members"][0]
 
-    assert parm_decl["Cursor"]["spelling"] == "aParameter"
+    assert parm_decl["cursor"]["spelling"] == "aParameter"
 
     type_ref = parm_decl["members"][0]
 
-    assert type_ref["CursorKind"]["name"] == "TYPE_REF"
-    assert type_ref["Cursor"]["spelling"] == "struct SomeUsefulType"
+    assert type_ref["cursor_kind"]["name"] == "TYPE_REF"
+    assert type_ref["cursor"]["spelling"] == "struct SomeUsefulType"
 
 
 def test_simple_constructor(tmp_path):
@@ -265,9 +265,9 @@ def test_simple_constructor(tmp_path):
     struct_decl = parsed_info["members"][0]
     constructor = struct_decl["members"][0]
 
-    assert constructor["CursorKind"]["name"] == "CONSTRUCTOR"
-    assert constructor["Cursor"]["access_specifier"] == "PUBLIC"
-    assert constructor["Cursor"]["spelling"] == "AStruct"
+    assert constructor["cursor_kind"]["name"] == "CONSTRUCTOR"
+    assert constructor["cursor"]["access_specifier"] == "PUBLIC"
+    assert constructor["cursor"]["spelling"] == "AStruct"
 
 
 def test_unexposed_expr(tmp_path):
@@ -283,12 +283,12 @@ def test_unexposed_expr(tmp_path):
     constructor = struct_decl["members"][1]
     member_ref = constructor["members"][1]
 
-    assert member_ref["Cursor"]["spelling"] == "aClassMember"
+    assert member_ref["cursor"]["spelling"] == "aClassMember"
 
     unexposed_expr = constructor["members"][2]
 
-    assert unexposed_expr["CursorKind"]["name"] == "UNEXPOSED_EXPR"
-    assert unexposed_expr["Cursor"]["spelling"] == "aConstructorParameter"
+    assert unexposed_expr["cursor_kind"]["name"] == "UNEXPOSED_EXPR"
+    assert unexposed_expr["cursor"]["spelling"] == "aConstructorParameter"
 
 
 # @TODO: Not sure how to reproduce. Maybe later.
@@ -313,10 +313,10 @@ def test_decl_ref_expr(tmp_path):
     decl_ref_expr_1 = unexposed_expr_1["members"][0]
     decl_ref_expr_2 = unexposed_expr_2["members"][0]
 
-    assert decl_ref_expr_1["CursorKind"]["name"] == "DECL_REF_EXPR"
-    assert decl_ref_expr_2["CursorKind"]["name"] == "DECL_REF_EXPR"
-    assert decl_ref_expr_1["Cursor"]["spelling"] == "secondFunctionParameter"
-    assert decl_ref_expr_2["Cursor"]["spelling"] == "firstFunctionParameter"
+    assert decl_ref_expr_1["cursor_kind"]["name"] == "DECL_REF_EXPR"
+    assert decl_ref_expr_2["cursor_kind"]["name"] == "DECL_REF_EXPR"
+    assert decl_ref_expr_1["cursor"]["spelling"] == "secondFunctionParameter"
+    assert decl_ref_expr_2["cursor"]["spelling"] == "firstFunctionParameter"
 
 
 def test_member_ref(tmp_path):
@@ -334,12 +334,12 @@ def test_member_ref(tmp_path):
     member_ref_1 = constructor["members"][2]
     member_ref_2 = constructor["members"][4]
 
-    assert member_ref_1["CursorKind"]["name"] == "MEMBER_REF"
-    assert member_ref_2["CursorKind"]["name"] == "MEMBER_REF"
-    assert member_ref_1["Type"]["kind"] == "INT"
-    assert member_ref_2["Type"]["kind"] == "INT"
-    assert member_ref_1["Cursor"]["spelling"] == "firstMember"
-    assert member_ref_2["Cursor"]["spelling"] == "secondMember"
+    assert member_ref_1["cursor_kind"]["name"] == "MEMBER_REF"
+    assert member_ref_2["cursor_kind"]["name"] == "MEMBER_REF"
+    assert member_ref_1["type"]["kind"] == "INT"
+    assert member_ref_2["type"]["kind"] == "INT"
+    assert member_ref_1["cursor"]["spelling"] == "firstMember"
+    assert member_ref_2["cursor"]["spelling"] == "secondMember"
 
 
 def test_class_template(tmp_path):
@@ -351,14 +351,14 @@ def test_class_template(tmp_path):
 
     class_template = parsed_info["members"][0]
 
-    assert class_template["CursorKind"]["name"] == "CLASS_TEMPLATE"
-    assert class_template["Cursor"]["spelling"] == "AStruct"
+    assert class_template["cursor_kind"]["name"] == "CLASS_TEMPLATE"
+    assert class_template["cursor"]["spelling"] == "AStruct"
 
     template_type_parameter = class_template["members"][0]
 
-    assert template_type_parameter["CursorKind"]["name"] == "TEMPLATE_TYPE_PARAMETER"
-    assert template_type_parameter["Cursor"]["spelling"] == "T"
-    assert template_type_parameter["Cursor"]["access_specifier"] == "PUBLIC"
+    assert template_type_parameter["cursor_kind"]["name"] == "TEMPLATE_TYPE_PARAMETER"
+    assert template_type_parameter["cursor"]["spelling"] == "T"
+    assert template_type_parameter["cursor"]["access_specifier"] == "PUBLIC"
 
 
 def test_template_non_type_parameter(tmp_path):
@@ -370,17 +370,17 @@ def test_template_non_type_parameter(tmp_path):
 
     class_template = parsed_info["members"][0]
 
-    assert class_template["CursorKind"]["name"] == "CLASS_TEMPLATE"
-    assert class_template["Cursor"]["spelling"] == "AStruct"
+    assert class_template["cursor_kind"]["name"] == "CLASS_TEMPLATE"
+    assert class_template["cursor"]["spelling"] == "AStruct"
 
     template_non_type_parameter = class_template["members"][0]
 
     assert (
-        template_non_type_parameter["CursorKind"]["name"]
+        template_non_type_parameter["cursor_kind"]["name"]
         == "TEMPLATE_NON_TYPE_PARAMETER"
     )
-    assert template_non_type_parameter["Type"]["kind"] == "INT"
-    assert template_non_type_parameter["Cursor"]["spelling"] == "N"
+    assert template_non_type_parameter["type"]["kind"] == "INT"
+    assert template_non_type_parameter["cursor"]["spelling"] == "N"
 
 
 def test_function_template(tmp_path):
@@ -392,15 +392,15 @@ def test_function_template(tmp_path):
 
     function_template = parsed_info["members"][0]
 
-    assert function_template["CursorKind"]["name"] == "FUNCTION_TEMPLATE"
-    assert function_template["Cursor"]["result_type"] == "void"
-    assert function_template["Cursor"]["spelling"] == "aFunction"
+    assert function_template["cursor_kind"]["name"] == "FUNCTION_TEMPLATE"
+    assert function_template["cursor"]["result_type"] == "void"
+    assert function_template["cursor"]["spelling"] == "aFunction"
 
     template_type_parameter = function_template["members"][0]
 
-    assert template_type_parameter["CursorKind"]["name"] == "TEMPLATE_TYPE_PARAMETER"
-    assert template_type_parameter["Cursor"]["spelling"] == "T"
-    assert template_type_parameter["Cursor"]["access_specifier"] == "PUBLIC"
+    assert template_type_parameter["cursor_kind"]["name"] == "TEMPLATE_TYPE_PARAMETER"
+    assert template_type_parameter["cursor"]["spelling"] == "T"
+    assert template_type_parameter["cursor"]["access_specifier"] == "PUBLIC"
 
 
 def test_template_type_parameter(tmp_path):
@@ -416,16 +416,16 @@ def test_template_type_parameter(tmp_path):
     class_template = parsed_info["members"][0]
     template_type_parameter = class_template["members"][0]
 
-    assert template_type_parameter["CursorKind"]["name"] == "TEMPLATE_TYPE_PARAMETER"
-    assert template_type_parameter["Type"]["kind"] == "UNEXPOSED"
-    assert template_type_parameter["Cursor"]["spelling"] == "T"
+    assert template_type_parameter["cursor_kind"]["name"] == "TEMPLATE_TYPE_PARAMETER"
+    assert template_type_parameter["type"]["kind"] == "UNEXPOSED"
+    assert template_type_parameter["cursor"]["spelling"] == "T"
 
     function_template = parsed_info["members"][1]
     template_type_parameter = function_template["members"][0]
 
-    assert template_type_parameter["CursorKind"]["name"] == "TEMPLATE_TYPE_PARAMETER"
-    assert template_type_parameter["Type"]["kind"] == "UNEXPOSED"
-    assert template_type_parameter["Cursor"]["spelling"] == "P"
+    assert template_type_parameter["cursor_kind"]["name"] == "TEMPLATE_TYPE_PARAMETER"
+    assert template_type_parameter["type"]["kind"] == "UNEXPOSED"
+    assert template_type_parameter["cursor"]["spelling"] == "P"
 
 
 def test_default_delete_constructor(tmp_path):
@@ -443,14 +443,14 @@ def test_default_delete_constructor(tmp_path):
 
     default_constructor = class_decl["members"][0]
 
-    assert default_constructor["CursorKind"]["name"] == "CONSTRUCTOR"
-    assert default_constructor["Cursor"]["spelling"] == "aClass"
-    assert default_constructor["Cursor"]["result_type"] == "void"
-    assert default_constructor["Cursor"]["is_default_constructor"]
+    assert default_constructor["cursor_kind"]["name"] == "CONSTRUCTOR"
+    assert default_constructor["cursor"]["spelling"] == "aClass"
+    assert default_constructor["cursor"]["result_type"] == "void"
+    assert default_constructor["cursor"]["is_default_constructor"]
 
     delete_constructor = class_decl["members"][1]
 
-    assert delete_constructor["CursorKind"]["name"] == "CONSTRUCTOR"
-    assert delete_constructor["Cursor"]["spelling"] == "aClass"
-    assert delete_constructor["Cursor"]["result_type"] == "void"
+    assert delete_constructor["cursor_kind"]["name"] == "CONSTRUCTOR"
+    assert delete_constructor["cursor"]["spelling"] == "aClass"
+    assert delete_constructor["cursor"]["result_type"] == "void"
     # no check available for deleted ctor analogous to `is_default_constructor`
