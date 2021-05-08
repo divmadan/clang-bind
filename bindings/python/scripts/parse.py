@@ -101,7 +101,14 @@ def generate_parsed_info(node):
     parsed_info["tokens"] = [x.spelling for x in cursor.get_tokens()]
     parsed_info["members"] = []
 
-    # add result of various kinds of checks available in cindex.py via clang_utils.py
+    """
+    Add result of various kinds of checks available in cindex.py via clang_utils.py
+
+    Checks:
+    - `check_functions_dict`: Functions that begin with "is_" i.e., checking functions
+    - `get_functions_dict`: Functions that begin with "get_" i.e., getter functions
+    - `properties_dict`: @property functions
+    """
     for key, object in (
         ("cursor_kind", CursorKindUtils(cursor_kind=cursor.kind)),
         ("cursor", CursorUtils(cursor=cursor)),
