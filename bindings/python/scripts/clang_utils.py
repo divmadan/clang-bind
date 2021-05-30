@@ -59,80 +59,80 @@ def getmembers_static(object, predicate=None):
     return results
 
 
-def define_class_using_macro(instance, object):
-    instance.check_functions_dict = {}
-    instance.get_functions_dict = {}
-    instance.properties_dict = {}
+class ClangUtils:
+    """
+    Clang's cindex class utilities.
 
-    # A list to ignore the functions/properties that causes segmentation errors.
-    ignore_list = ["mangled_name", "get_address_space", "get_typedef_name", "tls_kind"]
+    Supports the following objects:
+        CursorKind:
+            - A CursorKind describes the kind of entity that a cursor points to.
+            - https://github.com/llvm/llvm-project/blob/1acd9a1a29ac30044ecefb6613485d5d168f66ca/clang/bindings/python/clang/cindex.py#L657
+        Cursor:
+            - The Cursor class represents a reference to an element within the AST. It acts as a kind of iterator.
+            - https://github.com/llvm/llvm-project/blob/1acd9a1a29ac30044ecefb6613485d5d168f66ca/clang/bindings/python/clang/cindex.py#L1415
+        Type:
+            - The Type class represents the type of an element in the abstract syntax tree.
+            - https://github.com/llvm/llvm-project/blob/1acd9a1a29ac30044ecefb6613485d5d168f66ca/clang/bindings/python/clang/cindex.py#L2180
+    """
 
-    for entry in getmembers_static(object, predicate=inspect.isfunction):
-        if entry[0] not in ignore_list:
-            try:
-                if entry[0].startswith("is_"):
-                    instance.check_functions_dict[entry[0]] = entry[1](object)
-            except:
-                continue
-            try:
-                if entry[0].startswith("get_"):
-                    instance.get_functions_dict[entry[0]] = entry[1](object)
-            except:
-                continue
+    def __init__(self, object):
+        if not (
+            isinstance(object, clang.CursorKind)
+            or isinstance(object, clang.Cursor)
+            or isinstance(object, clang.Type)
+        ):
+            raise NotImplementedError(f"Not implemented for {object}")
 
-    for entry in getmembers_static(object):
-        if entry[0] not in ignore_list:
-            try:
-                if isinstance(entry[1], property):
-                    instance.properties_dict[entry[0]] = getattr(object, entry[0])
-            except:
-                continue
+        self.check_functions_dict = {}
+        self.get_functions_dict = {}
+        self.properties_dict = {}
 
+        # A list to ignore the functions/properties that causes segmentation errors.
+        ignore_list = [
+            "mangled_name",
+            "get_address_space",
+            "get_typedef_name",
+            "tls_kind",
+        ]
 
-class CursorKindUtils:
-    def __init__(self, cursor_kind: clang.CursorKind):
-        define_class_using_macro(instance=self, object=cursor_kind)
+        # populate dicts
+        for entry in getmembers_static(object):
+            if entry[0] not in ignore_list:
+                if inspect.isfunction(entry[1]):  # if function
+                    try:
+                        if entry[0].startswith("is_"):
+                            self.check_functions_dict[entry[0]] = entry[1](object)
+                        if entry[0].startswith("get_"):
+                            self.get_functions_dict[entry[0]] = entry[1](object)
+                    except:
+                        continue
+                else:  # else, property
+                    try:
+                        if isinstance(entry[1], property):
+                            self.properties_dict[entry[0]] = getattr(object, entry[0])
+                    except:
+                        continue
 
+    def get_check_functions_dict(self):
+        """
+        Returns: `check_functions_dict`:
+            - functions that begin with "is_" i.e., checking functions
+            - {function_name, function_result}
+        """
+        return self.check_functions_dict
 
-class CursorUtils:
-    def __init__(self, cursor: clang.Cursor):
-        define_class_using_macro(instance=self, object=cursor)
+    def get_get_functions_dict(self):
+        """
+        Returns: `get_functions_dict`:
+            - functions that begin with "get_" i.e., getter functions
+            - {function_name, function_result}
+        """
+        return self.get_functions_dict
 
-
-class TypeUtils:
-    def __init__(self, cursor_type: clang.Type):
-        define_class_using_macro(instance=self, object=cursor_type)
-
-
-# Docstring template for the classes
-class_docstring = """
-- {class_name} class utilities.
-    {link}
-- {description}
-
-`check_functions_dict`:
-    - Functions that begin with "is_" i.e., checking functions
-    - A list of two-tuples: (function_name: str, function_value: function)
-`get_functions_dict`:
-    - Functions that begin with "get_" i.e., getter functions
-    - A list of two-tuples: (function_name: str, function_value: function)
-`properties_dict`:
-    - @property functions
-    - A list of two-tuples: (property_name: str, property_value: property)
-"""
-
-CursorKindUtils.__doc__ = class_docstring.format(
-    class_name="CursorKind",
-    link="https://github.com/llvm/llvm-project/blob/1acd9a1a29ac30044ecefb6613485d5d168f66ca/clang/bindings/python/clang/cindex.py#L657",
-    description="A CursorKind describes the kind of entity that a cursor points to.",
-)
-CursorUtils.__doc__ = class_docstring.format(
-    class_name="Cursor",
-    link="https://github.com/llvm/llvm-project/blob/1acd9a1a29ac30044ecefb6613485d5d168f66ca/clang/bindings/python/clang/cindex.py#L1415",
-    description="The Cursor class represents a reference to an element within the AST. It acts as a kind of iterator.",
-)
-TypeUtils.__doc__ = class_docstring.format(
-    class_name="Type",
-    link="https://github.com/llvm/llvm-project/blob/1acd9a1a29ac30044ecefb6613485d5d168f66ca/clang/bindings/python/clang/cindex.py#L2180",
-    description="The Type class represents the type of an element in the abstract syntax tree.",
-)
+    def get_properties_dict(self):
+        """
+        Returns: properties_dict
+            - Properties
+            - {property_name, property}
+        """
+        return self.properties_dict
