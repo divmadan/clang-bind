@@ -1,6 +1,6 @@
 from context import scripts
 import clang.cindex as clang
-import scripts.parse as parse
+from scripts.parse import Parse
 
 
 def create_compilation_database(tmp_path, filepath):
@@ -25,12 +25,16 @@ def get_parsed_info(tmp_path, file_contents):
     with open(source_path, "w") as f:
         f.write(str(file_contents))
 
-    parsed_info = parse.parse_file(
-        source=str(source_path),
-        compilation_database_path=create_compilation_database(
-            tmp_path=tmp_path, filepath=source_path
-        ),
-    )
+        compiler_arguments = next(
+            Parse.get_compilation_arguments(
+                compilation_database_path=create_compilation_database(
+                    tmp_path=tmp_path, filepath=source_path
+                ),
+                filename=source_path,
+            )
+        )
+
+    parsed_info = Parse(source_path, compiler_arguments).get_parsed_info()
 
     return parsed_info
 
