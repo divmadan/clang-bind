@@ -6,6 +6,10 @@ from scripts.clang_utils import ClangUtils
 
 
 class Parse:
+    """
+    Class containing functions to generate an AST of a file and parse it to retrieve relevant information.
+    """
+
     def __init__(self, file, compiler_arguments):
         index = clang.Index.create()
 
