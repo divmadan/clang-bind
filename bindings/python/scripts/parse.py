@@ -36,40 +36,6 @@ def valid_children(node):
             yield (child_node)
 
 
-def print_ast(node):
-    """
-    Prints the AST by recursively traversing it
-
-    Parameters:
-        - node (dict):
-            - The node in the AST
-            - Keys:
-                - cursor: The cursor pointing to a node
-                - filename:
-                    - The file's name to check if the node belongs to it
-                    - Needed to ensure that only symbols belonging to the file gets parsed, not the included files' symbols
-                - depth: The depth of the node (root=0)
-
-    Returns:
-        - None
-    """
-
-    cursor = node["cursor"]
-    depth = node["depth"]
-
-    print(
-        "-" * depth,
-        cursor.location.file,
-        f"L{cursor.location.line} C{cursor.location.column}",
-        cursor.kind.name,
-        cursor.spelling,
-    )
-
-    # Get cursor's children and recursively print
-    for child_node in valid_children(node):
-        print_ast(child_node)
-
-
 def generate_parsed_info(node):
     """
     Generates parsed information by recursively traversing the AST
@@ -138,15 +104,15 @@ def generate_parsed_info(node):
     return parsed_info
 
 
-def get_compilation_commands(compilation_database_path, filename):
+def get_compilation_arguments(compilation_database_path, filename):
     """
-    Returns the compilation commands extracted from the compilation database
+    Yields the compilation commands extracted from the compilation database
 
     Parameters:
         - compilation_database_path: The path to `compile_commands.json`
         - filename: The file's name to get its compilation commands
 
-    Returns:
+    Yields:
         - compilation commands (list): The arguments passed to the compiler
     """
 
@@ -154,27 +120,12 @@ def get_compilation_commands(compilation_database_path, filename):
     compilation_database = clang.CompilationDatabase.fromDirectory(
         buildDir=compilation_database_path
     )
-
-    # Get compiler arguments from the compilation database for the given file
+    # Get compilation commands from the compilation database for the given file
     compilation_commands = compilation_database.getCompileCommands(filename=filename)
 
-    """
-    - compilation_commands:
-        - An iterable object providing all the compilation commands available to build filename.
-        - type: <class 'clang.cindex.CompileCommands'>
-    - compilation_commands[0]:
-        - Since we have only one command per filename in the compile_commands.json, extract 0th element
-        - type: <class 'clang.cindex.CompileCommand'>
-    - compilation_commands[0].arguments:
-        - Get compiler arguments from the CompileCommand object
-        - type: <class 'generator'>
-    - list(compilation_commands[0].arguments)[1:-1]:
-        - Convert the generator object to list, and extract compiler arguments
-        - 0th element is the compiler name
-        - nth element is the filename
-    """
-
-    return list(compilation_commands[0].arguments)[1:-1]
+    for compilation_command in compilation_commands:
+        # Extract compiler arguments, excluding compiler and filename
+        yield list(compilation_command.arguments)[1:-1]
 
 
 def parse_file(source, compilation_database_path=None):
@@ -193,9 +144,11 @@ def parse_file(source, compilation_database_path=None):
     index = clang.Index.create()
 
     # Get compiler arguments
-    compilation_commands = get_compilation_commands(
-        compilation_database_path=compilation_database_path,
-        filename=source,
+    compiler_arguments = next(
+        get_compilation_arguments(
+            compilation_database_path=compilation_database_path,
+            filename=source,
+        )
     )
 
     """
@@ -207,7 +160,7 @@ def parse_file(source, compilation_database_path=None):
     """
     source_ast = index.parse(
         path=source,
-        args=compilation_commands,
+        args=compiler_arguments,
         options=clang.TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD,
     )
 
@@ -217,9 +170,6 @@ def parse_file(source, compilation_database_path=None):
         "filename": source_ast.spelling,
         "depth": 0,
     }
-
-    # For testing purposes
-    # print_ast(root_node)
 
     return generate_parsed_info(root_node)
 
