@@ -7,33 +7,13 @@ import scripts.utils as utils
 from scripts.clang_utils import ClangUtils
 
 
-def valid_children(node):
-    """
-    A generator function yielding valid children nodes
+def is_valid_child(parent_node, child_node):
+    child = child_node.get("cursor")
+    parent_filename = parent_node.get("filename")
 
-    Parameters:
-        - node (dict):
-            - The node in the AST
-            - Keys:
-                - cursor: The cursor pointing to a node
-                - filename:
-                    - The file's name to check if the node belongs to it
-                    - Needed to ensure that only symbols belonging to the file gets parsed, not the included files' symbols
-                - depth: The depth of the node (root=0)
-
-    Yields:
-        - child_node (dict): Same structure as the argument
-    """
-
-    cursor = node["cursor"]
-    filename = node["filename"]
-    depth = node["depth"]
-
-    for child in cursor.get_children():
-        child_node = {"cursor": child, "filename": filename, "depth": depth + 1}
-        # Check if the child belongs to the file
-        if child.location.file and child.location.file.name == filename:
-            yield (child_node)
+    if child.location.file and child.location.file.name == parent_filename:
+        return True
+    return False
 
 
 def generate_parsed_info(node):
@@ -56,7 +36,9 @@ def generate_parsed_info(node):
             - The key 'members' contains the node's children's `parsed_info`
     """
 
-    cursor = node["cursor"]
+    cursor = node.get("cursor")
+    filename = node.get("filename")
+    depth = node.get("depth")
 
     # Objects to get various kinds of checks available in cindex.py via clang_utils.py
     cursor_kind_utils = ClangUtils(cursor.kind)
@@ -64,7 +46,7 @@ def generate_parsed_info(node):
     cursor_type_utils = ClangUtils(cursor.type)
 
     parsed_info = {
-        "depth": node["depth"],
+        "depth": depth,
         "line": cursor.location.line,
         "column": cursor.location.column,
         "tokens": [x.spelling for x in cursor.get_tokens()],
@@ -97,9 +79,11 @@ def generate_parsed_info(node):
     parsed_info["type"]["kind"] = parsed_info["type"]["kind"].name
 
     # Get cursor's children and recursively add their info to a dictionary, as members of the parent
-    for child_node in valid_children(node):
-        child_parsed_info = generate_parsed_info(child_node)
-        parsed_info["members"].append(child_parsed_info)
+    for child in cursor.get_children():
+        child_node = {"cursor": child, "filename": filename, "depth": depth + 1}
+        if is_valid_child(node, child_node):
+            child_parsed_info = generate_parsed_info(child_node)
+            parsed_info["members"].append(child_parsed_info)
 
     return parsed_info
 
