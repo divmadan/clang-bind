@@ -4,7 +4,7 @@ import clang.cindex as clang
 
 from context import scripts
 import scripts.utils as utils
-from scripts.clang_utils import CursorKindUtils, CursorUtils, TypeUtils
+from scripts.clang_utils import ClangUtils
 
 
 def valid_children(node):
@@ -90,46 +90,43 @@ def generate_parsed_info(node):
             - The key 'members' contains the node's children's `parsed_info`
     """
 
-    parsed_info = dict()
-
     cursor = node["cursor"]
-    depth = node["depth"]
 
-    parsed_info["depth"] = depth
-    parsed_info["line"] = cursor.location.line
-    parsed_info["column"] = cursor.location.column
-    parsed_info["tokens"] = [x.spelling for x in cursor.get_tokens()]
-    parsed_info["members"] = []
+    # Objects to get various kinds of checks available in cindex.py via clang_utils.py
+    cursor_kind_utils = ClangUtils(cursor.kind)
+    cursor_utils = ClangUtils(cursor)
+    cursor_type_utils = ClangUtils(cursor.type)
 
-    """
-    Add result of various kinds of checks available in cindex.py via clang_utils.py
+    parsed_info = {
+        "depth": node["depth"],
+        "line": cursor.location.line,
+        "column": cursor.location.column,
+        "tokens": [x.spelling for x in cursor.get_tokens()],
+        "cursor_kind": {
+            **cursor_kind_utils.get_check_functions_dict(),  # Functions that begin with "is_" i.e., checking functions
+            **cursor_kind_utils.get_get_functions_dict(),  # Functions that begin with "get_" i.e., getter functions
+            **cursor_kind_utils.get_properties_dict(),  # Properties
+        },
+        "cursor": {
+            **cursor_utils.get_check_functions_dict(),
+            **cursor_utils.get_get_functions_dict(),
+            **cursor_utils.get_properties_dict(),
+        },
+        "type": {
+            **cursor_type_utils.get_check_functions_dict(),
+            **cursor_type_utils.get_get_functions_dict(),
+            **cursor_type_utils.get_properties_dict(),
+        },
+        "members": [],
+    }
 
-    Checks:
-    - `check_functions_dict`: Functions that begin with "is_" i.e., checking functions
-    - `get_functions_dict`: Functions that begin with "get_" i.e., getter functions
-    - `properties_dict`: @property functions
-    """
-    for key, object in (
-        ("cursor_kind", CursorKindUtils(cursor_kind=cursor.kind)),
-        ("cursor", CursorUtils(cursor=cursor)),
-        ("type", TypeUtils(cursor_type=cursor.type)),
-    ):
-        parsed_info[key] = {
-            **object.check_functions_dict,
-            **object.get_functions_dict,
-            **object.properties_dict,
-        }
-
-    # Hacky fixes
-
+    # HACKY FIXES
     # get spelling from object
     parsed_info["cursor"]["result_type"] = parsed_info["cursor"]["result_type"].spelling
-
     # replace `AccessSpecifier.value` with just `value`
     parsed_info["cursor"]["access_specifier"] = parsed_info["cursor"][
         "access_specifier"
     ].name
-
     # replace `TypeKind.value` with just `value`
     parsed_info["type"]["kind"] = parsed_info["type"]["kind"].name
 
