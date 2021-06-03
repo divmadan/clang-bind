@@ -8,7 +8,9 @@ def getmembers_static(object, predicate=None):
     Optionally, only return members that satisfy a given predicate.
 
 
-    - A static version of `get_members` function at https://github.com/python/cpython/blob/14ba761078b5ae83519e34d66ab883743912c45b/Lib/inspect.py#L444-L486
+    - A static version of `get_members` function at:
+      https://github.com/python/cpython/blob/3.9/Lib/inspect.py#L326-L368
+      https://github.com/python/cpython/blob/14ba761078b5ae83519e34d66ab883743912c45b/Lib/inspect.py#L444-L486
         - `getmembers` function (from the inspect module) triggers execution instead of doing static analysis.
         - This leads to errors, particularly on properties of classes in cindex.py, which causes segmentation errors or raises an Exception if a particular condition is not satisfied.
         - To curb this, we fetch the members statically. We define a custom function based on the one in the inspect module.
@@ -41,14 +43,17 @@ class ClangUtils:
 
     Supports the following objects:
         CursorKind:
+          https://github.com/llvm/llvm-project/blob/release/12.x/clang/bindings/python/clang/cindex.py#L657
+          https://github.com/llvm/llvm-project/blob/1acd9a1a29ac30044ecefb6613485d5d168f66ca/clang/bindings/python/clang/cindex.py#L657
             - A CursorKind describes the kind of entity that a cursor points to.
-            - https://github.com/llvm/llvm-project/blob/1acd9a1a29ac30044ecefb6613485d5d168f66ca/clang/bindings/python/clang/cindex.py#L657
         Cursor:
+          https://github.com/llvm/llvm-project/blob/release/12.x/clang/bindings/python/clang/cindex.py#L1415
+          https://github.com/llvm/llvm-project/blob/1acd9a1a29ac30044ecefb6613485d5d168f66ca/clang/bindings/python/clang/cindex.py#L1415
             - The Cursor class represents a reference to an element within the AST. It acts as a kind of iterator.
-            - https://github.com/llvm/llvm-project/blob/1acd9a1a29ac30044ecefb6613485d5d168f66ca/clang/bindings/python/clang/cindex.py#L1415
         Type:
+          https://github.com/llvm/llvm-project/blob/release/12.x/clang/bindings/python/clang/cindex.py#L2180
+          https://github.com/llvm/llvm-project/blob/1acd9a1a29ac30044ecefb6613485d5d168f66ca/clang/bindings/python/clang/cindex.py#L2180
             - The Type class represents the type of an element in the abstract syntax tree.
-            - https://github.com/llvm/llvm-project/blob/1acd9a1a29ac30044ecefb6613485d5d168f66ca/clang/bindings/python/clang/cindex.py#L2180
     """
 
     def __init__(self, object):
