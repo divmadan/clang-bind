@@ -72,22 +72,23 @@ class ClangUtils:
         ]
 
         # populate dicts
-        for entry in getmembers_static(object):
-            if entry[0] not in ignore_list:
-                if inspect.isfunction(entry[1]):  # if function
-                    try:
-                        if entry[0].startswith("is_"):
-                            self.check_functions_dict[entry[0]] = entry[1](object)
-                        if entry[0].startswith("get_"):
-                            self.get_functions_dict[entry[0]] = entry[1](object)
-                    except:
-                        continue
-                else:  # else, property
-                    try:
-                        if isinstance(entry[1], property):
-                            self.properties_dict[entry[0]] = getattr(object, entry[0])
-                    except:
-                        continue
+        valid_entries = filter(
+            lambda entry: entry[0] not in ignore_list, getmembers_static(object)
+        )
+        for name, func in valid_entries:
+            if inspect.isfunction(func):  # if function
+                try:
+                    if name.startswith("is_"):
+                        self.check_functions_dict[name] = func(object)
+                    if name.startswith("get_"):
+                        self.get_functions_dict[name] = func(object)
+                except:
+                    continue
+            elif isinstance(func, property):  # else, property
+                try:
+                    self.properties_dict[name] = getattr(object, name)
+                except:
+                    continue
 
     def get_check_functions_dict(self):
         """
