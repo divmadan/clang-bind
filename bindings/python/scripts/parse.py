@@ -134,29 +134,3 @@ class Parse:
         """
         return self.parse_node_recursive(self.root_node)
 
-    # @TODO: Move the function out of this file in a separate PR
-    @staticmethod
-    def get_compilation_arguments(compilation_database_path, filename):
-        """
-        Yields the compilation commands extracted from the compilation database
-
-        Parameters:
-            - compilation_database_path: The path to `compile_commands.json`
-            - filename: The file's name to get its compilation commands
-
-        Yields:
-            - compilation commands (list): The arguments passed to the compiler
-        """
-
-        # Build a compilation database found in the given directory
-        compilation_database = clang.CompilationDatabase.fromDirectory(
-            buildDir=compilation_database_path
-        )
-        # Get compilation commands from the compilation database for the given file
-        compilation_commands = compilation_database.getCompileCommands(
-            filename=filename
-        )
-
-        for compilation_command in compilation_commands:
-            # Extract compiler arguments, excluding compiler and filename
-            yield list(compilation_command.arguments)[1:-1]
