@@ -82,7 +82,7 @@ class ClangUtils:
         )
         for name, func in valid_entries:
             if inspect.isfunction(func):  # if function
-                try:
+                try:  # cindex.py's functions raise exceptions internally
                     if name.startswith("is_"):
                         self.check_functions_dict[name] = func(object)
                     if name.startswith("get_"):
@@ -90,7 +90,7 @@ class ClangUtils:
                 except:
                     continue
             elif isinstance(func, property):  # else, property
-                try:
+                try:  # cindex.py's property functions raise exceptions internally
                     self.properties_dict[name] = getattr(object, name)
                 except:
                     continue
