@@ -1,8 +1,30 @@
 import clang.cindex as clang
 
 from context import scripts
-import scripts.utils as utils
 from scripts.clang_utils import ClangUtils
+from treelib import Tree
+
+
+class ParsedNode:
+    def __init__(self, clang_cursor):
+        self.clang_cursor = clang_cursor
+        self.line = clang_cursor.location.line
+        self.column = clang_cursor.location.column
+        self.tokens = [x.spelling for x in clang_cursor.get_tokens()]
+
+        # checks available in cindex.py via clang_utils.py
+        self.cursor_kind = ClangUtils(clang_cursor.kind).get_all_functions_dict()
+        self.cursor = ClangUtils(clang_cursor).get_all_functions_dict()
+        self.type = ClangUtils(clang_cursor.type).get_all_functions_dict()
+
+        # HACKY FIXES
+        # get spelling from object
+        self.cursor["result_type"] = self.cursor["result_type"].spelling
+        # replace `AccessSpecifier.value` with just `value`
+        self.cursor["access_specifier"] = self.cursor["access_specifier"].name
+        # replace `TypeKind.value` with just `value`
+        self.type["kind"] = self.type["kind"].name
+
 
 
 class Parse:
@@ -12,124 +34,57 @@ class Parse:
 
     def __init__(self, file, compiler_arguments):
         index = clang.Index.create()
-
         """
         - Why parse using the option `PARSE_DETAILED_PROCESSING_RECORD`?
             - Indicates that the parser should construct a detailed preprocessing record, 
             including all macro definitions and instantiations
             - Required to retrieve `CursorKind.INCLUSION_DIRECTIVE`
         """
-
         source_ast = index.parse(
             path=file,
             args=compiler_arguments,
             options=clang.TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD,
         )
 
-        self.root_node = {
-            "cursor": source_ast.cursor,
-            "filename": source_ast.spelling,
-            "depth": 0,
-        }
+        self.filename = source_ast.spelling
+        clang_cursor = source_ast.cursor
 
-    @staticmethod
-    def _is_valid_child(parent_node, child_node):
-        child = child_node.get("cursor")
-        parent_filename = parent_node.get("filename")
+        self.tree = Tree()
+        root_node = self.tree.create_node(
+            tag=(clang_cursor.kind, clang_cursor.spelling),
+            data=ParsedNode(source_ast.cursor),
+        )
 
-        if child.location.file and child.location.file.name == parent_filename:
-            return True
-        return False
+        self._construct_tree(root_node)
 
-    @staticmethod
-    def get_parsed_node(node):
-        cursor = node.get("cursor")
-
-        # Objects to get various kinds of checks available in cindex.py via clang_utils.py
-        cursor_kind_utils = ClangUtils(cursor.kind)
-        cursor_utils = ClangUtils(cursor)
-        cursor_type_utils = ClangUtils(cursor.type)
-
-        parsed_node = {
-            "depth": node.get("depth"),
-            "line": cursor.location.line,
-            "column": cursor.location.column,
-            "tokens": [x.spelling for x in cursor.get_tokens()],
-            "cursor_kind": {
-                **cursor_kind_utils.get_check_functions_dict(),  # Functions that begin with "is_" i.e., checking functions
-                **cursor_kind_utils.get_get_functions_dict(),  # Functions that begin with "get_" i.e., getter functions
-                **cursor_kind_utils.get_properties_dict(),  # Properties
-            },
-            "cursor": {
-                **cursor_utils.get_check_functions_dict(),
-                **cursor_utils.get_get_functions_dict(),
-                **cursor_utils.get_properties_dict(),
-            },
-            "type": {
-                **cursor_type_utils.get_check_functions_dict(),
-                **cursor_type_utils.get_get_functions_dict(),
-                **cursor_type_utils.get_properties_dict(),
-            },
-            "members": [],
-        }
-
-        # HACKY FIXES
-        # get spelling from object
-        parsed_node["cursor"]["result_type"] = parsed_node["cursor"][
-            "result_type"
-        ].spelling
-        # replace `AccessSpecifier.value` with just `value`
-        parsed_node["cursor"]["access_specifier"] = parsed_node["cursor"][
-            "access_specifier"
-        ].name
-        # replace `TypeKind.value` with just `value`
-        parsed_node["type"]["kind"] = parsed_node["type"]["kind"].name
-
-        return parsed_node
-
-    @classmethod
-    def parse_node_recursive(cls, node):
+    def _is_valid_child(self, clang_child_cursor):
         """
-        Generates parsed information by recursively traversing the AST
+        Check if the child is valid (child should be in the same file as the parent).
+        """
+        return (
+            clang_child_cursor.location.file
+            and clang_child_cursor.location.file.name == self.filename
+        )
 
-        Parameters:
-            - node (dict):
-                - The node in the AST
-                - Keys:
-                    - cursor: The cursor pointing to a node
-                    - filename:
-                        - The file's name to check if the node belongs to it
-                        - Needed to ensure that only symbols belonging to the file gets parsed, not the included files' symbols
-                    - depth: The depth of the node (root=0)
-
-        Returns:
-            - parsed_info (dict):
-                - Contains key-value pairs of various traits of a node
-                - The key 'members' contains the node's children's `parsed_info`
+    def _construct_tree(self, node):
+        """
+        Recursively generates tree by traversing the AST of the node.
         """
 
-        cursor = node.get("cursor")
-        filename = node.get("filename")
-        depth = node.get("depth")
+        # clang_cursor = node.data.get("clang_cursor")
+        clang_cursor = node.data.clang_cursor
 
-        parsed_info = cls.get_parsed_node(node)
+        for clang_child_cursor in clang_cursor.get_children():
+            if self._is_valid_child(clang_child_cursor):
+                child_node = self.tree.create_node(
+                    tag=(clang_child_cursor.kind, clang_child_cursor.spelling),
+                    parent=node,
+                    data=ParsedNode(clang_child_cursor),
+                )
+                self._construct_tree(child_node)
 
-        # Get cursor's children and recursively add their info to a dictionary, as members of the parent
-        for child in cursor.get_children():
-            child_node = {"cursor": child, "filename": filename, "depth": depth + 1}
-            if cls._is_valid_child(node, child_node):
-                child_parsed_info = cls.parse_node_recursive(child_node)
-                parsed_info["members"].append(child_parsed_info)
-
-        return parsed_info
-
-    def get_parsed_info(self):
+    def get_tree(self):
         """
-        Returns the parsed information for a file by recursively traversing the AST
-
-        Returns:
-            - parsed_info (dict):
-                - Contains key-value pairs of various traits of a node
-                - The key 'members' contains the node's children's `parsed_info`
+        Returns the constructed tree.
         """
-        return self.parse_node_recursive(self.root_node)
+        return self.tree
